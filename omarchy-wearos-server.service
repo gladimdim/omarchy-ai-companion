@@ -1,0 +1,13 @@
+[Unit]
+Description=Omarchy AI Watch Bridge Daemon
+After=network.target avahi-daemon.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/gladimdim/Github/omarchy-ai-watch/omarchy-plugin/server.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

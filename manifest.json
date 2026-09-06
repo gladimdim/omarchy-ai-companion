@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "gladimdim.omarchy-ai-watch",
+  "name": "Omarchy AI Watch Bridge",
+  "version": "1.0.0",
+  "author": "Dmytro Gladkyi",
+  "license": "MIT",
+  "description": "Bridge and dock controller for Wear OS AI Usage Watch Face and Complications with one-time PIN pairing.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "AI Watch Bridge",
+    "description": "Wear OS companion bridge, watch status, and AI quota manager",
+    "category": "AI",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
