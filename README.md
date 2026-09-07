@@ -21,7 +21,7 @@
 Link the plugin into your Omarchy user plugins folder:
 
 ```bash
-ln -s /home/gladimdim/Github/omarchy-ai-watch/omarchy-ai-companion ~/.config/omarchy/plugins/gladimdim.omarchy-ai-watch
+ln -s "$(pwd)" ~/.config/omarchy/plugins/gladimdim.omarchy-ai-companion
 omarchy restart shell
 ```
 
