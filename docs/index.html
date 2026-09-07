@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omarchy AI Watch Bridge — live AI quotas on your wrist</title>
+<meta name="description" content="An Omarchy dock widget and local bridge that puts your Claude Code, Antigravity, Grok and Codex quotas on a Wear OS watch face.">
+<meta property="og:title" content="Omarchy AI Watch Bridge">
+<meta property="og:description" content="Live AI quotas on your wrist. An Omarchy dock widget, a local bridge, and a Wear OS watch face with four quota gauges.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/watchface.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌚</text></svg>">
+
+<style>
+  :root {
+    --bg:        #0d0e14;
+    --bg-raise:  #14151d;
+    --card:      #171823;
+    --line:      #262838;
+    --line-soft: #1e2030;
+    --fg:        #e6e9f2;
+    --fg-dim:    #a2a8bf;
+    --fg-faint:  #6f7590;
+    --green:     #9ece6a;
+    --blue:      #7aa2f7;
+    --orange:    #d97757;
+    --violet:    #a855f7;
+    --cyan:      #38bdf8;
+    --gold:      #ffd98a;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --wrap: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img { max-width: 100%; display: block; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+
+  /* ---------------------------------------------------------------- header */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(13, 14, 20, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav { display: flex; align-items: center; gap: 20px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -0.01em; }
+  .brand svg { flex: none; }
+  .nav-links { margin-left: auto; display: flex; gap: 22px; align-items: center; }
+  .nav-links a { color: var(--fg-dim); font-size: 14.5px; }
+  .nav-links a:hover { color: var(--fg); text-decoration: none; }
+  @media (max-width: 640px) { .nav-links a.hide-sm { display: none; } }
+
+  /* ------------------------------------------------------------------ hero */
+  .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--line-soft); }
+  .hero-grid {
+    display: grid; gap: 48px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: center;
+  }
+  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--green); margin: 0 0 16px;
+  }
+  h1 {
+    margin: 0 0 18px; font-size: clamp(34px, 5.2vw, 52px);
+    line-height: 1.08; letter-spacing: -0.025em; font-weight: 700;
+  }
+  h1 .accent { color: var(--green); }
+  .lede { margin: 0 0 28px; font-size: 18.5px; color: var(--fg-dim); max-width: 46ch; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 11px 20px; border-radius: 9px;
+    font-size: 15px; font-weight: 600; border: 1px solid transparent;
+  }
+  .btn:hover { text-decoration: none; }
+  .btn-primary { background: var(--green); color: #10210a; }
+  .btn-primary:hover { background: #b2de84; }
+  .btn-ghost { border-color: var(--line); color: var(--fg); background: var(--bg-raise); }
+  .btn-ghost:hover { border-color: #39405a; }
+
+  /* the watch, shown round the way it is worn */
+  .watch-stage { display: flex; justify-content: center; }
+  .watch {
+    position: relative; width: min(340px, 78vw); aspect-ratio: 1;
+    border-radius: 50%; overflow: hidden;
+    border: 7px solid #1b1d27;
+    box-shadow: 0 0 0 1px #33374a, 0 26px 60px rgba(0,0,0,0.55);
+  }
+  .watch img { width: 100%; height: 100%; object-fit: cover; }
+  .watch-caption {
+    margin-top: 16px; text-align: center;
+    font-family: var(--mono); font-size: 12.5px; color: var(--fg-faint);
+  }
+
+  /* --------------------------------------------------------------- section */
+  section { padding: 72px 0; border-bottom: 1px solid var(--line-soft); }
+  .sec-head { max-width: 62ch; margin-bottom: 40px; }
+  h2 {
+    margin: 0 0 12px; font-size: clamp(24px, 3.2vw, 32px);
+    letter-spacing: -0.02em; line-height: 1.2;
+  }
+  .sec-head p { margin: 0; color: var(--fg-dim); font-size: 17px; }
+  h3 { margin: 0 0 8px; font-size: 17px; letter-spacing: -0.01em; }
+
+  /* --------------------------------------------------------------- feature */
+  .features { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 880px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px;
+  }
+  .card p { margin: 0; color: var(--fg-dim); font-size: 14.8px; }
+  .card .ic {
+    width: 32px; height: 32px; border-radius: 8px; margin-bottom: 14px;
+    display: grid; place-items: center; font-size: 16px;
+    background: rgba(158, 206, 106, 0.12); color: var(--green);
+  }
+  .ic.b { background: rgba(122, 162, 247, 0.12); color: var(--blue); }
+  .ic.o { background: rgba(217, 119, 87, 0.14); color: var(--orange); }
+  .ic.v { background: rgba(168, 85, 247, 0.14); color: var(--violet); }
+  .ic.c { background: rgba(56, 189, 248, 0.12); color: var(--cyan); }
+  .ic.g { background: rgba(255, 217, 138, 0.14); color: var(--gold); }
+
+  /* --------------------------------------------------------------- screens */
+  .shots { display: grid; gap: 26px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .shots { grid-template-columns: 1fr; } }
+  figure { margin: 0; }
+  figure img {
+    width: 100%; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg-raise);
+  }
+  figcaption { margin-top: 12px; color: var(--fg-dim); font-size: 14.5px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .dock-shot { max-width: 520px; }
+
+  /* the two face shots read as watches, not as black squares */
+  .round-watch img {
+    border-radius: 50%; border: 6px solid #1b1d27;
+    box-shadow: 0 0 0 1px #33374a, 0 16px 40px rgba(0,0,0,0.45);
+    max-width: 380px; margin: 0 auto;
+  }
+  .dock-shot img { image-rendering: -webkit-optimize-contrast; }
+
+  /* --------------------------------------------------------------- install */
+  .steps { display: grid; gap: 22px; }
+  .step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .step-n {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--bg-raise); border: 1px solid var(--line);
+    font-family: var(--mono); font-size: 14px; color: var(--green);
+  }
+  pre {
+    margin: 12px 0 0; padding: 15px 17px; overflow-x: auto;
+    background: #0b0c11; border: 1px solid var(--line); border-radius: 10px;
+    font-family: var(--mono); font-size: 13.4px; line-height: 1.7; color: #d3d8e8;
+  }
+  code { font-family: var(--mono); font-size: 0.93em; }
+  p code, li code { background: var(--bg-raise); border: 1px solid var(--line-soft);
+                    padding: 1px 6px; border-radius: 5px; color: var(--gold); }
+  pre .c { color: var(--fg-faint); }
+
+  /* ------------------------------------------------------------- watch app */
+  .app-grid {
+    display: grid; gap: 34px; align-items: center;
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+  @media (max-width: 760px) { .app-grid { grid-template-columns: 1fr; } }
+
+  .qr-box {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px; text-align: center;
+  }
+  #qr-slot {
+    width: 190px; height: 190px; margin: 0 auto 16px;
+    display: grid; place-items: center;
+    border-radius: 10px; background: #fff; padding: 10px;
+  }
+  #qr-slot.empty {
+    background: transparent; border: 2px dashed var(--line);
+    color: var(--fg-faint); font-family: var(--mono);
+    font-size: 12px; line-height: 1.7; padding: 20px;
+  }
+  #qr-slot canvas, #qr-slot img { width: 100%; height: 100%; display: block; }
+  .qr-label { font-size: 14px; color: var(--fg-dim); margin: 0; }
+  .badge-soon {
+    display: inline-block; font-family: var(--mono); font-size: 11.5px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold); background: rgba(255, 217, 138, 0.1);
+    border: 1px solid rgba(255, 217, 138, 0.25);
+    padding: 4px 10px; border-radius: 999px;
+  }
+
+  ul.plain { margin: 0; padding-left: 20px; color: var(--fg-dim); }
+  ul.plain li { margin-bottom: 9px; }
+  ul.plain li::marker { color: var(--fg-faint); }
+  ul.plain b { color: var(--fg); font-weight: 600; }
+
+  /* ---------------------------------------------------------------- footer */
+  footer { padding: 40px 0 56px; color: var(--fg-faint); font-size: 14px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .foot .sp { margin-left: auto; }
+  footer a { color: var(--fg-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <span class="brand">
+      <!-- the dock icon, redrawn as an inline SVG: robot head, watch behind it -->
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <g stroke="#8891ab" stroke-width="1.5" fill="none">
+          <rect x="2.6" y="2.1" width="14.3" height="16.3" rx="5"/>
+          <circle cx="9.75" cy="10.25" r="4.3" stroke-width="1"/>
+        </g>
+        <g fill="#8891ab">
+          <rect x="6.2" y="0" width="7.2" height="2.7" rx="1"/>
+          <rect x="17" y="4.2" width="1.9" height="3.2" rx="0.8"/>
+        </g>
+        <path d="M19.4 12.6v-2.2" stroke="#e6e9f2" stroke-width="1.4"/>
+        <circle cx="19.4" cy="9.6" r="1.15" fill="#9ece6a"/>
+        <rect x="10.7" y="12.4" width="10.4" height="8.2" rx="2.6"
+              fill="#0d0e14" stroke="#e6e9f2" stroke-width="1.5"/>
+        <circle cx="13.7" cy="15.8" r="1.25" fill="#9ece6a"/>
+        <circle cx="18.1" cy="15.8" r="1.25" fill="#9ece6a"/>
+        <rect x="13.3" y="18.2" width="5.2" height="1.2" rx="0.6" fill="#8891ab"/>
+      </svg>
+      Omarchy AI Watch Bridge
+    </span>
+    <nav class="nav-links">
+      <a href="#features" class="hide-sm">Features</a>
+      <a href="#screens" class="hide-sm">Screens</a>
+      <a href="#install">Install</a>
+      <a href="#watch-app">Watch app</a>
+      <a href="https://github.com/gladimdim/omarchy-ai-companion">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Omarchy plugin · Wear OS watch face</p>
+      <h1>Your AI quotas, <span class="accent">on your wrist</span>.</h1>
+      <p class="lede">
+        A dock widget and a local bridge that read every AI CLI agent on your
+        machine, then drive four quota gauges on a Wear OS watch face. Glance at
+        your wrist to see how much Claude, Grok or Antigravity you have left.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#install">Install the plugin</a>
+        <a class="btn btn-ghost" href="#watch-app">Get the watch app</a>
+      </div>
+    </div>
+    <div>
+      <div class="watch-stage">
+        <div class="watch">
+          <img src="assets/watchface.png"
+               alt="The Omarchy AI watch face on a Galaxy Watch: four coloured quota arcs around the rim, each labelled with an agent and a percentage, a large pixel clock in the middle.">
+        </div>
+      </div>
+      <p class="watch-caption">Live on a Galaxy Watch. Four agents, four gauges.</p>
+    </div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>What it does</h2>
+      <p>
+        The laptop does the work: it finds your agents, reads their limits and
+        hands the numbers to the watch. The watch just draws them.
+      </p>
+    </div>
+
+    <div class="features">
+      <div class="card">
+        <div class="ic">◴</div>
+        <h3>Four quota gauges</h3>
+        <p>
+          Top, right, bottom and left arcs map to four limits you choose. Each
+          one carries its agent's name and percentage around the rim.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="ic b">⌕</div>
+        <h3>Finds your agents</h3>
+        <p>
+          Claude Code, Antigravity, Grok, Codex and OpenAI are discovered from
+          what is actually installed. Session, weekly and model-level limits all
+          show up as pickable gauges.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="ic o">⇄</div>
+        <h3>Pairing without typing</h3>
+        <p>
+          Click <b>Add watch</b> on the laptop, tap <b>Connect</b> on the watch.
+          The window lasts 120 seconds and closes the moment one device takes it.
+          A 4-digit code is still there as a fallback.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="ic v">⚿</div>
+        <h3>Token auth, enforced</h3>
+        <p>
+          The bearer token issued at pairing is checked on every request. Only
+          ping and the pairing handshake are open, so nobody else on the network
+          can read your usage.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="ic c">⟳</div>
+        <h3>Heals its own address</h3>
+        <p>
+          DHCP moves the laptop and the watch quietly re-sweeps the subnet to
+          find it again. There is no reconnect step, and mDNS still runs as the
+          fast path.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="ic g">⌂</div>
+        <h3>Nothing leaves the LAN</h3>
+        <p>
+          A zero-dependency Python daemon on the standard library, listening on
+          port <code>8765</code>. No account, no cloud, no third-party service in
+          the middle.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>The widget</h2>
+      <p>
+        It lives in the Omarchy dock as a single icon and opens into everything
+        else: pairing, watch health, and which limit each gauge is tracking.
+      </p>
+    </div>
+
+    <figure class="dock-shot" style="margin-bottom:34px">
+      <img src="assets/widget-dock.png"
+           alt="The Omarchy dock, showing the widget's icon: a robot head in front of a smartwatch, with green eyes.">
+      <figcaption>
+        <b>In the dock.</b> The robot's eyes carry the connection state: green
+        when the watch is online, amber when it is paired but out of touch.
+      </figcaption>
+    </figure>
+
+    <div class="shots">
+      <figure>
+        <img src="assets/widget-pairing.png"
+             alt="The widget panel, Pairing tab: a live preview of the watch face, the paired device with its battery and last sync, an Add another watch button, a four-digit fallback code, and the how-to-connect steps.">
+        <figcaption>
+          <b>Pairing.</b> A live preview of what the watch is showing, the paired
+          device, its battery and how long ago it synced — then one button to add
+          the next watch. The four-digit code below it is only for setups driven
+          from a terminal with no widget on screen.
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="assets/widget-slots.png"
+             alt="The widget panel, LLM Slots tab: four gauge slots at the top and a list of discovered limits with progress bars.">
+        <figcaption>
+          <b>LLM slots.</b> Every limit found on the machine, with what is left of
+          it. Click a gauge to change what it tracks; the watch follows on its
+          next sync.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="watch-face">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>The watch face</h2>
+      <p>
+        Built in Watch Face Format, so the face itself ships no code. It binds to
+        the four complications on its own the moment you pick it.
+      </p>
+    </div>
+
+    <div class="shots">
+      <figure class="round-watch">
+        <img src="assets/watchface.png"
+             alt="The watch face in interactive mode: four quota arcs, pixel clock, date and battery.">
+        <figcaption>
+          <b>Thirteen backgrounds, nine logo colours.</b> Each background carries
+          its own pair of gauge colours, kept away from it in both hue and
+          brightness so an arc never disappears into the ground behind it.
+        </figcaption>
+      </figure>
+      <figure class="round-watch">
+        <img src="assets/watchface-ambient.png"
+             alt="The watch face in always-on mode: a dim clock on pure black, with the arcs hidden.">
+        <figcaption>
+          <b>Always-on goes black.</b> Whatever background you pick, ambient mode
+          drops to true black and hides the arcs. On an OLED panel that is the
+          difference between a face you can leave on all day and one you cannot.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Install</h2>
+      <p>Two pieces on the laptop: the dock widget, and the daemon that feeds it.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div>
+          <h3>Link the plugin into Omarchy</h3>
+          <pre><span class="c"># from a clone of this repo</span>
+ln -s "$(pwd)" ~/.config/omarchy/plugins/gladimdim.omarchy-ai-companion
+omarchy restart shell</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-n">2</div>
+        <div>
+          <h3>Run the bridge as a user service</h3>
+          <pre>mkdir -p ~/.config/systemd/user
+cp omarchy-wearos-server.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now omarchy-wearos-server.service</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-n">3</div>
+        <div>
+          <h3>Check it is up</h3>
+          <pre>python3 server.py --status</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-n">4</div>
+        <div>
+          <h3>Connect the watch</h3>
+          <p style="color:var(--fg-dim);margin:0">
+            Click <b>Add watch</b> in the dock widget, then open the Omarchy AI
+            app on the watch and tap <b>Connect</b>. That is the whole setup —
+            nothing is typed on the watch. Then long-press the watch face,
+            <b>Customize</b>, and pick <b>Omarchy AI</b>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="watch-app">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>The watch app</h2>
+      <p>
+        The companion app and the watch face install on the watch itself. It
+        needs Wear OS 5 or newer — the face uses Watch Face Format v2 features
+        that older releases do not have.
+      </p>
+    </div>
+
+    <div class="app-grid">
+      <div>
+        <ul class="plain">
+          <li><b>Wear OS 5+</b>, tested on a Galaxy Watch (SM-L705F).</li>
+          <li><b>Same Wi-Fi as the laptop.</b> A Galaxy Watch parks its Wi-Fi radio while tethered to a phone over Bluetooth; the app says so and offers the Wi-Fi settings screen.</li>
+          <li><b>No phone app needed.</b> The watch talks to the laptop directly.</li>
+          <li>Prefer to build it yourself? The watch side lives in
+            <a href="https://github.com/gladimdim/ai-omarchy-wearos">ai-omarchy-wearos</a>.</li>
+        </ul>
+      </div>
+
+      <div class="qr-box">
+        <div id="qr-slot" class="empty">QR code appears here<br>once the Play Store<br>link is set</div>
+        <p class="qr-label" id="qr-label"><span class="badge-soon">Coming to Google Play</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <span>MIT · Dmytro Gladkyi</span>
+    <span class="sp"></span>
+    <a href="https://github.com/gladimdim/omarchy-ai-companion">Plugin &amp; bridge</a>
+    <a href="https://github.com/gladimdim/ai-omarchy-wearos">Wear OS app</a>
+  </div>
+</footer>
+
+<!--
+  ============================================================================
+  TO TURN ON THE PLAY STORE QR CODE: put the listing URL in PLAY_URL below.
+  Nothing else needs changing. The page draws the QR itself, swaps the badge
+  for a real button, and the "Coming to Google Play" state disappears.
+
+      const PLAY_URL = "https://play.google.com/store/apps/details?id=..."
+  ============================================================================
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const PLAY_URL = "";
+
+  (function () {
+    const slot  = document.getElementById("qr-slot");
+    const label = document.getElementById("qr-label");
+    if (!PLAY_URL) return;                       // stay in the "coming soon" state
+
+    label.innerHTML =
+      '<a class="btn btn-primary" style="width:100%;justify-content:center" href="' +
+      PLAY_URL + '">Get it on Google Play</a>' +
+      '<span style="display:block;margin-top:12px;font-size:13px;color:var(--fg-faint)">' +
+      'Or point your watch’s camera at the code.</span>';
+
+    if (typeof QRCode === "undefined") {         // CDN blocked: link still works
+      slot.textContent = "Open the link below to install";
+      return;
+    }
+    slot.classList.remove("empty");
+    slot.textContent = "";
+    new QRCode(slot, {
+      text: PLAY_URL,
+      width: 170,
+      height: 170,
+      colorDark: "#0d0e14",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  })();
+</script>
+
+</body>
+</html>
