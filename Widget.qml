@@ -25,14 +25,9 @@ BarWidget {
   readonly property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.45)
   readonly property color cardBg: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.05)
   readonly property color cardBorder: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.12)
-  // The same pixel typeface the watch face uses for its clock, so the widget and
-  // the wrist read as one product rather than two unrelated things.
-  FontLoader {
-    id: pixelFont
-    source: Qt.resolvedUrl("omarchy.ttf")
-  }
-  readonly property string retroFamily: pixelFont.status === FontLoader.Ready
-                                        ? pixelFont.name : root.fontFamily
+  // The widget deliberately does not load omarchy.ttf, the pixel typeface the
+  // watch face draws its clock with. It matched the wrist, but a bitmap face at
+  // UI sizes is simply hard to read, so every label here uses the bar's own font.
 
   // A slow block cursor, the way a terminal idles.
   property bool caretOn: true
@@ -462,42 +457,154 @@ BarWidget {
       anchors.centerIn: parent
       spacing: Style.space(6)
 
-      // Watch icon with dynamic connection dot
+      // The dock icon: a robot head with a smartwatch case standing behind it.
+      // Drawn rather than set in a font. The glyph that used to sit here was
+      // U+F07DF, commented "Nerd Font watch", but the icon font the bar actually
+      // loads has a mushroom at that codepoint, so that is what the dock showed.
+      //
+      // The eyes and the watch's side button carry the connection state, which
+      // is why the separate status dot that used to float over the glyph is
+      // gone: green once a watch is online, amber while one is paired but out of
+      // touch, muted when none is known.
       Item {
-        implicitWidth: Style.space(18)
-        implicitHeight: Style.space(18)
+        id: dockIcon
+        implicitWidth: robot.width
+        implicitHeight: robot.height
 
-        Text {
+        readonly property color statusColor: root.watchOnline ? "#9ECE6A"
+                                           : (root.watchLinked ? "#F59E0B" : root.muted)
+        readonly property color inkColor: root.watchLinked ? root.foreground : root.muted
+
+        onStatusColorChanged: robot.requestPaint()
+        onInkColorChanged: robot.requestPaint()
+
+        Canvas {
+          id: robot
           anchors.centerIn: parent
-          text: "󰟟" // Material Nerd Font Watch
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.title
-          color: root.watchStatus && root.watchStatus.connected ? "#9ECE6A" : root.muted
-        }
+          width: Style.space(22)
+          height: width
 
-        // Connection status indicator dot
-        Rectangle {
-          width: Style.space(6)
-          height: Style.space(6)
-          radius: width / 2
-          anchors.right: parent.right
-          anchors.bottom: parent.bottom
-          color: root.watchOnline ? "#9ECE6A" : "#F59E0B"
+          onPaint: {
+            var ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
+
+            // Everything below is laid out on a 24x24 grid and scaled to
+            // whatever the bar is actually giving us.
+            var s = width / 24
+            var ink = dockIcon.inkColor
+            var status = dockIcon.statusColor
+            var behind = Qt.rgba(ink.r, ink.g, ink.b, 0.5)
+
+            ctx.lineJoin = "round"
+            ctx.lineCap = "round"
+
+            function rr(x, y, w, h, r) {
+              ctx.beginPath()
+              ctx.moveTo((x + r) * s, y * s)
+              ctx.lineTo((x + w - r) * s, y * s)
+              ctx.quadraticCurveTo((x + w) * s, y * s, (x + w) * s, (y + r) * s)
+              ctx.lineTo((x + w) * s, (y + h - r) * s)
+              ctx.quadraticCurveTo((x + w) * s, (y + h) * s, (x + w - r) * s, (y + h) * s)
+              ctx.lineTo((x + r) * s, (y + h) * s)
+              ctx.quadraticCurveTo(x * s, (y + h) * s, x * s, (y + h - r) * s)
+              ctx.lineTo(x * s, (y + r) * s)
+              ctx.quadraticCurveTo(x * s, y * s, (x + r) * s, y * s)
+              ctx.closePath()
+            }
+
+            function dot(cx, cy, r) {
+              ctx.beginPath()
+              ctx.arc(cx * s, cy * s, r * s, 0, Math.PI * 2)
+              ctx.closePath()
+            }
+
+            // --- the watch, behind. A cushion case with a round display and a
+            // side button, which is the shape a Galaxy Watch Ultra cuts.
+            ctx.fillStyle = behind
+            rr(6.5, 0, 6.5, 3, 1)
+            ctx.fill()
+            rr(6.5, 18, 6.5, 3, 1)
+            ctx.fill()
+
+            ctx.strokeStyle = behind
+            ctx.lineWidth = 1.7 * s
+            rr(2.5, 2, 14.5, 16.5, 5)
+            ctx.stroke()
+
+            ctx.lineWidth = 1.1 * s
+            dot(9.75, 10.25, 4.4)
+            ctx.stroke()
+
+            // The side button sits high on the case, clear of the antenna. It is
+            // drawn in the same ink as the rest of the watch rather than in the
+            // status colour: one more coloured blob at this size just competes
+            // with the eyes.
+            ctx.fillStyle = behind
+            rr(17.0, 4.2, 1.9, 3.2, 0.8)
+            ctx.fill()
+
+            // --- punch the head out of the watch, so the head reads as being in
+            // front of it without needing to know the bar's background colour.
+            // Only the head is punched. Knocking out the antenna too left a notch
+            // bitten through the side of the watch case.
+            ctx.globalCompositeOperation = "destination-out"
+            ctx.fillStyle = "#000000"
+            rr(9.7, 11.4, 12.4, 10.2, 3.4)
+            ctx.fill()
+            ctx.globalCompositeOperation = "source-over"
+
+            // --- the robot, in front. The antenna rises to the right of the
+            // watch case, where there is nothing behind it to cut into, and it
+            // is drawn before the head so the head covers its root.
+            ctx.strokeStyle = ink
+            ctx.lineWidth = 1.4 * s
+            ctx.lineCap = "butt"
+            ctx.beginPath()
+            ctx.moveTo(19.4 * s, 12.6 * s)
+            ctx.lineTo(19.4 * s, 10.4 * s)
+            ctx.stroke()
+            ctx.lineCap = "round"
+
+            ctx.fillStyle = status
+            dot(19.4, 9.6, 1.15)
+            ctx.fill()
+
+            ctx.fillStyle = Qt.rgba(ink.r, ink.g, ink.b, 0.12)
+            rr(10.7, 12.4, 10.4, 8.2, 2.6)
+            ctx.fill()
+            ctx.strokeStyle = ink
+            ctx.lineWidth = 1.5 * s
+            rr(10.7, 12.4, 10.4, 8.2, 2.6)
+            ctx.stroke()
+
+            ctx.fillStyle = status
+            dot(13.7, 15.8, 1.25)
+            ctx.fill()
+            dot(18.1, 15.8, 1.25)
+            ctx.fill()
+
+            ctx.fillStyle = Qt.rgba(ink.r, ink.g, ink.b, 0.75)
+            rr(13.3, 18.2, 5.2, 1.2, 0.6)
+            ctx.fill()
+          }
         }
       }
 
-      // Short status label in dock
+      // Short status label in dock. Once a watch is paired the icon says
+      // everything on its own, so the label steps aside entirely and the widget
+      // sits in the tray as one icon, like everything around it. The name stays
+      // up only while nothing is paired, so the widget is still findable then.
+      //
+      // The battery percentage used to live here and is gone: it is the watch's
+      // own battery, it is already on the watch face, and a number that moves
+      // once an hour earns no room in a bar.
       Text {
-        font.family: root.retroFamily
+        visible: text !== ""
+        font.family: root.fontFamily
         font.pixelSize: Style.font.body
         font.bold: true
         color: root.foreground
-        text: {
-          if (root.watchStatus && root.watchStatus.connected) {
-            return "⌚ " + (root.watchStatus.battery ? root.watchStatus.battery + "%" : "OK")
-          }
-          return "AI Watch"
-        }
+        text: root.watchLinked ? "" : "AI Watch"
       }
     }
   }
@@ -560,7 +667,7 @@ BarWidget {
 
             Text {
               text: "OMARCHY AI WATCH"
-              font.family: root.retroFamily
+              font.family: root.fontFamily
               font.pixelSize: Style.font.heading
               font.letterSpacing: 1
               color: root.foreground
@@ -588,7 +695,7 @@ BarWidget {
             Text {
               anchors.centerIn: parent
               text: "PAIRING"
-              font.family: root.retroFamily
+              font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
               font.bold: true
               color: root.activeTab === 0 ? Color.background : root.foreground
@@ -612,7 +719,7 @@ BarWidget {
             Text {
               anchors.centerIn: parent
               text: "LLM SLOTS"
-              font.family: root.retroFamily
+              font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
               font.bold: true
               color: root.activeTab === 1 ? Color.background : root.foreground
@@ -749,7 +856,7 @@ BarWidget {
                     Text {
                       anchors.centerIn: parent
                       text: root.watchOnline ? "ONLINE" : (root.watchLinked ? "LINKED" : "WAITING")
-                      font.family: root.retroFamily
+                      font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
                       font.bold: true
                       color: root.watchOnline ? "#9ECE6A" : "#F59E0B"
@@ -820,7 +927,7 @@ BarWidget {
                   }
                   Text {
                     text: "[ CONNECT A WATCH ]"
-                    font.family: root.retroFamily
+                    font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     font.letterSpacing: 1
                     color: root.muted
