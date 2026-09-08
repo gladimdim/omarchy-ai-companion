@@ -150,7 +150,7 @@ BarWidget {
       text: root.watchStatus ? root.watchStatus.battery + "%" : ""
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
-      color: root.watchStatus && root.watchStatus.battery <= 30 ? "#F7768E" : "#9ECE6A"
+      color: root.watchStatus && root.watchStatus.battery <= 30 ? "#FF4D4D" : "#9ECE6A"
     }
 
     Component.onCompleted: root.facePreview = face
@@ -471,8 +471,12 @@ BarWidget {
         implicitWidth: robot.width
         implicitHeight: robot.height
 
+        // Green when the watch is answering, red once it stops. A watch that is
+        // paired but out of touch is the state worth noticing, so it gets the
+        // alarming colour rather than a cautious amber. Nothing paired yet is
+        // not a fault, so that one stays muted.
         readonly property color statusColor: root.watchOnline ? "#9ECE6A"
-                                           : (root.watchLinked ? "#F59E0B" : root.muted)
+                                           : (root.watchLinked ? "#FF4D4D" : root.muted)
         readonly property color inkColor: root.watchLinked ? root.foreground : root.muted
 
         onStatusColorChanged: robot.requestPaint()
@@ -493,7 +497,10 @@ BarWidget {
             var s = width / 24
             var ink = dockIcon.inkColor
             var status = dockIcon.statusColor
-            var behind = Qt.rgba(ink.r, ink.g, ink.b, 0.5)
+            // The watch is the status light: it is the biggest shape in the icon
+            // and the one the eye lands on. Held a little under full strength so
+            // the robot in front of it still reads as the nearer object.
+            var behind = Qt.rgba(status.r, status.g, status.b, 0.85)
 
             ctx.lineJoin = "round"
             ctx.lineCap = "round"
@@ -535,10 +542,8 @@ BarWidget {
             dot(9.75, 10.25, 4.4)
             ctx.stroke()
 
-            // The side button sits high on the case, clear of the antenna. It is
-            // drawn in the same ink as the rest of the watch rather than in the
-            // status colour: one more coloured blob at this size just competes
-            // with the eyes.
+            // The side button sits high on the case, clear of the antenna, and
+            // travels with the rest of the watch.
             ctx.fillStyle = behind
             rr(17.0, 4.2, 1.9, 3.2, 0.8)
             ctx.fill()
