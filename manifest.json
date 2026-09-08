@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Dmytro Gladkyi",
   "license": "MIT",
-  "description": "Bridge and dock controller for Wear OS AI Usage Watch Face and Complications with one-time PIN pairing.",
+  "description": "Bar widget and local bridge that puts your AI coding quotas on a Wear OS watch face. Talks only to your own watch, on your own network.",
   "kinds": [
     "bar-widget"
   ],
