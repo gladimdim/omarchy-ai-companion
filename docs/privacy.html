@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Omarchy AI Watch</title>
+<meta name="description" content="Privacy policy for the Omarchy AI Wear OS app, watch face and desktop bridge. No data is collected; the watch talks only to a program you run on your own computer.">
+<meta property="og:title" content="Privacy Policy — Omarchy AI Watch">
+<meta property="og:description" content="These apps collect nothing. The watch talks only to a bridge you run on your own computer, over your own network.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌚</text></svg>">
+
+<style>
+  :root {
+    --bg:        #0d0e14;
+    --bg-raise:  #14151d;
+    --card:      #171823;
+    --line:      #262838;
+    --line-soft: #1e2030;
+    --fg:        #e6e9f2;
+    --fg-dim:    #a2a8bf;
+    --fg-faint:  #6f7590;
+    --green:     #9ece6a;
+    --blue:      #7aa2f7;
+    --orange:    #d97757;
+    --violet:    #a855f7;
+    --cyan:      #38bdf8;
+    --gold:      #ffd98a;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --wrap: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img { max-width: 100%; display: block; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+
+  /* ---------------------------------------------------------------- header */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(13, 14, 20, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav { display: flex; align-items: center; gap: 20px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -0.01em; }
+  .brand svg { flex: none; }
+  .nav-links { margin-left: auto; display: flex; gap: 22px; align-items: center; }
+  .nav-links a { color: var(--fg-dim); font-size: 14.5px; }
+  .nav-links a:hover { color: var(--fg); text-decoration: none; }
+  @media (max-width: 640px) { .nav-links a.hide-sm { display: none; } }
+
+  /* ------------------------------------------------------------------ hero */
+  .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--line-soft); }
+  .hero-grid {
+    display: grid; gap: 48px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: center;
+  }
+  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--green); margin: 0 0 16px;
+  }
+  h1 {
+    margin: 0 0 18px; font-size: clamp(34px, 5.2vw, 52px);
+    line-height: 1.08; letter-spacing: -0.025em; font-weight: 700;
+  }
+  h1 .accent { color: var(--green); }
+  .lede { margin: 0 0 28px; font-size: 18.5px; color: var(--fg-dim); max-width: 46ch; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 11px 20px; border-radius: 9px;
+    font-size: 15px; font-weight: 600; border: 1px solid transparent;
+  }
+  .btn:hover { text-decoration: none; }
+  .btn-primary { background: var(--green); color: #10210a; }
+  .btn-primary:hover { background: #b2de84; }
+  .btn-ghost { border-color: var(--line); color: var(--fg); background: var(--bg-raise); }
+  .btn-ghost:hover { border-color: #39405a; }
+
+  /* the watch, shown round the way it is worn */
+  .watch-stage { display: flex; justify-content: center; }
+  .watch {
+    position: relative; width: min(340px, 78vw); aspect-ratio: 1;
+    border-radius: 50%; overflow: hidden;
+    border: 7px solid #1b1d27;
+    box-shadow: 0 0 0 1px #33374a, 0 26px 60px rgba(0,0,0,0.55);
+  }
+  .watch img { width: 100%; height: 100%; object-fit: cover; }
+  .watch-caption {
+    margin-top: 16px; text-align: center;
+    font-family: var(--mono); font-size: 12.5px; color: var(--fg-faint);
+  }
+
+  /* --------------------------------------------------------------- section */
+  section { padding: 72px 0; border-bottom: 1px solid var(--line-soft); }
+  .sec-head { max-width: 62ch; margin-bottom: 40px; }
+  h2 {
+    margin: 0 0 12px; font-size: clamp(24px, 3.2vw, 32px);
+    letter-spacing: -0.02em; line-height: 1.2;
+  }
+  .sec-head p { margin: 0; color: var(--fg-dim); font-size: 17px; }
+  h3 { margin: 0 0 8px; font-size: 17px; letter-spacing: -0.01em; }
+
+  /* --------------------------------------------------------------- feature */
+  .features { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 880px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px;
+  }
+  .card p { margin: 0; color: var(--fg-dim); font-size: 14.8px; }
+  .card .ic {
+    width: 32px; height: 32px; border-radius: 8px; margin-bottom: 14px;
+    display: grid; place-items: center; font-size: 16px;
+    background: rgba(158, 206, 106, 0.12); color: var(--green);
+  }
+  .ic.b { background: rgba(122, 162, 247, 0.12); color: var(--blue); }
+  .ic.o { background: rgba(217, 119, 87, 0.14); color: var(--orange); }
+  .ic.v { background: rgba(168, 85, 247, 0.14); color: var(--violet); }
+  .ic.c { background: rgba(56, 189, 248, 0.12); color: var(--cyan); }
+  .ic.g { background: rgba(255, 217, 138, 0.14); color: var(--gold); }
+
+  /* --------------------------------------------------------------- screens */
+  .shots { display: grid; gap: 26px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .shots { grid-template-columns: 1fr; } }
+  figure { margin: 0; }
+  figure img {
+    width: 100%; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg-raise);
+  }
+  figcaption { margin-top: 12px; color: var(--fg-dim); font-size: 14.5px; }
+  figcaption b { color: var(--fg); font-weight: 600; }
+
+  .dock-shot { max-width: 520px; }
+
+  /* the two face shots read as watches, not as black squares */
+  .round-watch img {
+    border-radius: 50%; border: 6px solid #1b1d27;
+    box-shadow: 0 0 0 1px #33374a, 0 16px 40px rgba(0,0,0,0.45);
+    max-width: 380px; margin: 0 auto;
+  }
+  .dock-shot img { image-rendering: -webkit-optimize-contrast; }
+
+  /* --------------------------------------------------------------- install */
+  .steps { display: grid; gap: 22px; }
+  .step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .step-n {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--bg-raise); border: 1px solid var(--line);
+    font-family: var(--mono); font-size: 14px; color: var(--green);
+  }
+  pre {
+    margin: 12px 0 0; padding: 15px 17px; overflow-x: auto;
+    background: #0b0c11; border: 1px solid var(--line); border-radius: 10px;
+    font-family: var(--mono); font-size: 13.4px; line-height: 1.7; color: #d3d8e8;
+  }
+  code { font-family: var(--mono); font-size: 0.93em; }
+  p code, li code { background: var(--bg-raise); border: 1px solid var(--line-soft);
+                    padding: 1px 6px; border-radius: 5px; color: var(--gold); }
+  pre .c { color: var(--fg-faint); }
+
+  /* ------------------------------------------------------------- watch app */
+  .app-grid {
+    display: grid; gap: 34px; align-items: center;
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+  @media (max-width: 760px) { .app-grid { grid-template-columns: 1fr; } }
+
+  .qr-box {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px; text-align: center;
+  }
+  #qr-slot {
+    width: 190px; height: 190px; margin: 0 auto 16px;
+    display: grid; place-items: center;
+    border-radius: 10px; background: #fff; padding: 10px;
+  }
+  #qr-slot.empty {
+    background: transparent; border: 2px dashed var(--line);
+    color: var(--fg-faint); font-family: var(--mono);
+    font-size: 12px; line-height: 1.7; padding: 20px;
+  }
+  #qr-slot canvas, #qr-slot img { width: 100%; height: 100%; display: block; }
+  .qr-label { font-size: 14px; color: var(--fg-dim); margin: 0; }
+  .badge-soon {
+    display: inline-block; font-family: var(--mono); font-size: 11.5px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold); background: rgba(255, 217, 138, 0.1);
+    border: 1px solid rgba(255, 217, 138, 0.25);
+    padding: 4px 10px; border-radius: 999px;
+  }
+
+  ul.plain { margin: 0; padding-left: 20px; color: var(--fg-dim); }
+  ul.plain li { margin-bottom: 9px; }
+  ul.plain li::marker { color: var(--fg-faint); }
+  ul.plain b { color: var(--fg); font-weight: 600; }
+
+  /* ---------------------------------------------------------------- footer */
+  footer { padding: 40px 0 56px; color: var(--fg-faint); font-size: 14px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .foot .sp { margin-left: auto; }
+  footer a { color: var(--fg-dim); }
+</style>
+
+<style>
+  .doc { max-width: 760px; padding-top: 56px; padding-bottom: 80px; }
+  .doc h1 { font-size: 2.1rem; margin: 0 0 10px; letter-spacing: -0.02em; }
+  .doc h2 {
+    font-size: 1.12rem; margin: 40px 0 12px; color: var(--fg);
+    padding-top: 22px; border-top: 1px solid var(--line-soft);
+  }
+  .doc .lede { color: var(--fg-dim); font-size: 1.05rem; margin: 0 0 6px; }
+  .doc .meta { color: var(--fg-faint); font-family: var(--mono); font-size: 0.82rem; margin: 0 0 34px; }
+  .doc p, .doc li { color: var(--fg-dim); }
+  .doc strong { color: var(--fg); }
+  .doc ul { padding-left: 20px; }
+  .doc li { margin-bottom: 10px; }
+  .doc code {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--bg-raise); border: 1px solid var(--line-soft);
+    border-radius: 4px; padding: 1px 5px; color: var(--fg);
+  }
+  .callout {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 3px solid var(--green);
+    border-radius: 8px; padding: 16px 18px; margin: 0 0 12px; color: var(--fg-dim);
+  }
+  table.perm { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.92rem; }
+  table.perm th, table.perm td {
+    text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line-soft);
+    vertical-align: top; color: var(--fg-dim);
+  }
+  table.perm th { color: var(--fg-faint); font-weight: 600; font-size: 0.8rem;
+                  text-transform: uppercase; letter-spacing: 0.05em; }
+  table.perm td:first-child { white-space: nowrap; }
+  @media (max-width: 640px) {
+    table.perm td:first-child { white-space: normal; }
+  }
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <span class="brand">
+      <!-- the dock icon, redrawn as an inline SVG: robot head, watch behind it -->
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <g stroke="#8891ab" stroke-width="1.5" fill="none">
+          <rect x="2.6" y="2.1" width="14.3" height="16.3" rx="5"/>
+          <circle cx="9.75" cy="10.25" r="4.3" stroke-width="1"/>
+        </g>
+        <g fill="#8891ab">
+          <rect x="6.2" y="0" width="7.2" height="2.7" rx="1"/>
+          <rect x="17" y="4.2" width="1.9" height="3.2" rx="0.8"/>
+        </g>
+        <path d="M19.4 12.6v-2.2" stroke="#e6e9f2" stroke-width="1.4"/>
+        <circle cx="19.4" cy="9.6" r="1.15" fill="#9ece6a"/>
+        <rect x="10.7" y="12.4" width="10.4" height="8.2" rx="2.6"
+              fill="#0d0e14" stroke="#e6e9f2" stroke-width="1.5"/>
+        <circle cx="13.7" cy="15.8" r="1.25" fill="#9ece6a"/>
+        <circle cx="18.1" cy="15.8" r="1.25" fill="#9ece6a"/>
+        <rect x="13.3" y="18.2" width="5.2" height="1.2" rx="0.6" fill="#8891ab"/>
+      </svg>
+      Omarchy AI Watch Bridge
+    </span>
+    <nav class="nav-links">
+      <a href="index.html#features" class="hide-sm">Features</a>
+      <a href="index.html#screens" class="hide-sm">Screens</a>
+      <a href="index.html#install">Install</a>
+      <a href="index.html#watch-app">Watch app</a>
+      <a href="https://github.com/gladimdim/omarchy-ai-companion">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap doc">
+
+  <h1>Privacy Policy</h1>
+  <p class="lede">
+    Omarchy AI (Wear OS app), Omarchy AI Watch Face, and the Omarchy AI Watch
+    Bridge desktop plugin.
+  </p>
+  <p class="meta">Effective 8 September 2026 &middot; Last updated 8 September 2026</p>
+
+  <div class="callout">
+    <strong>The short version.</strong> These apps collect nothing, send nothing
+    to us, and have no servers of ours to send it to. The watch talks only to a
+    program you run on your own computer, over your own network. We never see any
+    of it.
+  </div>
+
+  <h2>Who this is from</h2>
+  <p>
+    Dmytro Gladkyi, an individual developer, is responsible for these apps.
+    Contact: <a href="mailto:gladimdim@gmail.com">gladimdim@gmail.com</a>.
+  </p>
+
+  <h2>What data is collected</h2>
+  <p>
+    <strong>None.</strong> No personal data, no usage analytics, no crash
+    reporting, no advertising identifiers, no device identifiers. There is no
+    account to create and nothing to log in to. No third-party analytics,
+    advertising or tracking SDK is bundled in any of these apps.
+  </p>
+
+  <h2>How the apps work</h2>
+  <p>
+    The Wear OS app talks to the Omarchy AI Watch Bridge, an open-source program
+    you install and run yourself on your own computer. Both must be on the same
+    local Wi-Fi network. Communication is direct, on your network only. The
+    developer operates no server and receives no data of any kind.
+  </p>
+  <p>What travels over that local connection, in both directions:</p>
+  <ul>
+    <li>
+      <strong>From your computer to your watch:</strong> AI usage figures the
+      bridge reads from your own machine &mdash; quota percentages, reset times,
+      token and session counts for AI coding tools you have installed, and the
+      computer's hostname so you can tell your machines apart.
+    </li>
+    <li>
+      <strong>From your watch to your computer:</strong> the watch's model name
+      and battery percentage, so the desktop widget can show whether the watch is
+      connected, and which quotas you have assigned to which gauge.
+    </li>
+    <li>
+      <strong>A pairing token</strong> generated on your computer when you first
+      connect a watch, so a stranger on the same network cannot read your figures.
+    </li>
+  </ul>
+  <p>
+    All of it stays between those two devices. None of it reaches the developer or
+    any third party.
+  </p>
+
+  <h2>Finding your computer on the network</h2>
+  <p>
+    To connect without asking you to type an IP address, the watch app looks for
+    the bridge on the local network in two ways: an mDNS/Bonjour lookup, and by
+    asking each address on your own Wi-Fi subnet whether it is running the bridge.
+    That check sends a single request to one address, reads only the reply that
+    identifies the bridge, and keeps nothing about any other device. No inventory
+    of your network is built, stored or transmitted. This happens only while you
+    are connecting a watch, or when a previously paired computer has changed
+    address.
+  </p>
+
+  <h2>Where data is stored</h2>
+  <p>
+    On your watch, in the app's own private storage: the paired computer's address
+    and name, the pairing token, your gauge choices and alert preferences, and a
+    cached copy of the last figures received so the watch face still shows
+    something when the computer is asleep. On your computer, in files under your
+    own home directory. Nothing is stored anywhere else.
+  </p>
+  <p>
+    Because the Wear OS app allows Android system backup, this local data may be
+    included in your device's own Google backup if you have that enabled. That
+    backup is between you and Google under
+    <a href="https://policies.google.com/privacy" rel="noopener">Google's privacy policy</a>;
+    the developer has no access to it.
+  </p>
+
+  <h2>Deleting your data</h2>
+  <p>
+    Tap <em>Unlink this laptop</em> in the watch app to erase the pairing token
+    and every cached figure from the watch. Uninstalling the app removes all of it
+    regardless. On your computer, deleting
+    <code>~/.local/state/omarchy/wearos/</code> removes the pairing state, and
+    uninstalling the plugin removes the rest. There is no server-side copy to
+    request the deletion of, because there is no server.
+  </p>
+
+  <h2>Permissions, and why each is needed</h2>
+  <table class="perm">
+    <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>INTERNET</code></td><td>To reach the bridge on your local network. No internet host is contacted.</td></tr>
+      <tr><td><code>ACCESS_NETWORK_STATE</code>, <code>ACCESS_WIFI_STATE</code></td><td>To tell you when the watch has dropped off Wi-Fi, which is the usual reason a sync fails.</td></tr>
+      <tr><td><code>CHANGE_WIFI_MULTICAST_STATE</code></td><td>For the mDNS lookup that finds your computer.</td></tr>
+      <tr><td><code>POST_NOTIFICATIONS</code></td><td>To alert you when a quota resets or runs out.</td></tr>
+      <tr><td><code>VIBRATE</code></td><td>To buzz your wrist with that alert.</td></tr>
+      <tr><td><code>WAKE_LOCK</code></td><td>Used by the scheduler that refreshes figures in the background.</td></tr>
+    </tbody>
+  </table>
+  <p>
+    No location, camera, microphone, contacts, health, or storage permission is
+    requested, and none of that data is accessed.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    These apps are developer tools, are not directed at children, and collect no
+    data from anyone, including children under 13.
+  </p>
+
+  <h2>Third parties</h2>
+  <p>
+    No data is sold, shared or transferred to anyone. The apps contain no
+    advertising and no third-party analytics. Distribution through Google Play
+    means Google collects install and crash data under its own policy; the
+    developer receives only anonymous aggregate figures from the Play Console and
+    can identify no individual from them.
+  </p>
+
+  <h2>Security</h2>
+  <p>
+    Connections are protected by a token issued when you pair, and the bridge
+    rejects requests that do not carry it. Traffic runs over plain HTTP because it
+    never leaves your local network and a self-hosted service on a home network
+    has no certificate a device could verify. The content is quota percentages and
+    reset times. Treat your local network as you would for any other device on it.
+  </p>
+
+  <h2>Open source</h2>
+  <p>
+    Everything described here is verifiable. Both halves are MIT licensed:
+    <a href="https://github.com/gladimdim/ai-omarchy-wearos" rel="noopener">the Wear OS app and watch face</a>
+    and
+    <a href="https://github.com/gladimdim/omarchy-ai-companion" rel="noopener">the desktop bridge</a>.
+  </p>
+
+  <h2>Changes</h2>
+  <p>
+    If this policy changes, the updated version appears on this page with a new
+    date above. Material changes will also be noted in the app's Play Store
+    release notes.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Questions about privacy, or this policy:
+    <a href="mailto:gladimdim@gmail.com">gladimdim@gmail.com</a>, or open an issue
+    on either repository above.
+  </p>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>MIT &middot; Dmytro Gladkyi</span>
+    <span class="sp"></span>
+    <a href="index.html">Home</a>
+    <a href="https://github.com/gladimdim/omarchy-ai-companion">Plugin &amp; bridge</a>
+    <a href="https://github.com/gladimdim/ai-omarchy-wearos">Wear OS app</a>
+  </div>
+</footer>
+
+</body>
+</html>
