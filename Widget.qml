@@ -54,7 +54,7 @@ BarWidget {
 
   // ------------------------------------------------------------- State
   property bool popupOpen: false
-  property int activeTab: 0 // 0: Watch & Pairing, 1: LLM Providers & Slots
+  property int activeTab: 0 // 0: Pairing, 1: LLM slots, 2: Setup
 
   property string serverPin: "----"
   property bool pairingOpen: false
@@ -99,6 +99,35 @@ BarWidget {
   property var facePreview: null
 
   readonly property string serverScriptPath: pathFromUrl(Qt.resolvedUrl("server.py"))
+  readonly property string setupScriptPath: pathFromUrl(Qt.resolvedUrl("setup.sh"))
+
+  // Laptop-side installer. The watch cannot see this machine until the daemon
+  // is up and the firewall lets TCP 8765 in. Polled independently of --status
+  // so a dead daemon does not stall the checklist.
+  property var setupStatus: ({ "ok": true, "steps": [], "tips": [], "lanIp": "", "port": 8765 })
+  property bool setupChecked: false
+  property bool setupReady: true
+  property bool setupAutoOpened: false
+  property string setupFixing: ""
+  property string setupFixMessage: ""
+  readonly property bool setupBusy: setupFixing !== ""
+  readonly property var setupSteps: (setupStatus && setupStatus.steps) ? setupStatus.steps : []
+  readonly property var setupTips: (setupStatus && setupStatus.tips) ? setupStatus.tips : []
+  readonly property bool setupHasFixable: {
+    var steps = root.setupSteps
+    for (var i = 0; i < steps.length; i++) {
+      if (steps[i] && !steps[i].ok && steps[i].fixable) return true
+    }
+    return false
+  }
+  readonly property string setupMissingSummary: {
+    var steps = root.setupSteps
+    var names = []
+    for (var i = 0; i < steps.length; i++) {
+      if (steps[i] && !steps[i].ok && steps[i].required) names.push(steps[i].title)
+    }
+    return names.join(" · ")
+  }
 
   // ------------------------------------------------------------- Components
 
@@ -163,23 +192,30 @@ BarWidget {
     }
   }
 
-  /** One of the two tabs across the top of the panel. */
+  /** One of the tabs across the top of the panel. */
   component PanelTab: Rectangle {
     id: tab
     property string label: ""
     property int index: 0
+    property bool alert: false
 
-    implicitWidth: Style.space(90)
-    implicitHeight: Style.space(26)
+    implicitWidth: Style.space(80)
+    implicitHeight: Style.space(28)
+    Layout.fillWidth: true
+    Layout.minimumWidth: Style.space(64)
     radius: root.radiusVal
-    color: root.activeTab === tab.index ? root.accent : root.cardBg
-    border.color: root.cardBorder
+    color: root.activeTab === tab.index ? root.accent
+           : (tab.alert ? Qt.rgba(root.warnColor.r, root.warnColor.g, root.warnColor.b, 0.18)
+                        : root.cardBg)
+    border.color: root.activeTab === tab.index ? root.accent
+                  : (tab.alert ? root.warnColor : root.cardBorder)
 
     Body {
       anchors.centerIn: parent
       text: tab.label
       font.bold: true
-      color: root.activeTab === tab.index ? Color.background : root.foreground
+      color: root.activeTab === tab.index ? Color.background
+             : (tab.alert ? root.warnColor : root.foreground)
     }
 
     MouseArea {
@@ -206,6 +242,112 @@ BarWidget {
       id: collector
       waitForEnd: true
       onStreamFinished: cmd.finished(collector.text)
+    }
+  }
+
+  /**
+   * Runs setup.sh. Firewall / avahi changes go through pkexec from here, which
+   * is what pops the system password dialog — there is no TTY in the bar.
+   */
+  component SetupCommand: Process {
+    id: setupCmd
+    property var args: []
+    signal finished(int exitCode, string output)
+
+    command: ["bash", root.setupScriptPath].concat(setupCmd.args)
+    running: false
+    stdout: StdioCollector {
+      id: setupOut
+      waitForEnd: true
+    }
+    stderr: StdioCollector {
+      id: setupErr
+      waitForEnd: true
+    }
+    onExited: function(exitCode) {
+      var out = String(setupOut.text || "")
+      var err = String(setupErr.text || "")
+      var combined = (out + (out && err ? "\n" : "") + err).trim()
+      setupCmd.finished(exitCode, combined)
+    }
+  }
+
+  /** One laptop-side installer step: status, explanation, and a fix button. */
+  component SetupStep: Rectangle {
+    id: stepCard
+    property var step: null
+    signal fixRequested()
+
+    readonly property bool stepOk: step && step.ok === true
+    readonly property bool stepWarn: step && !step.ok && step.required === false
+    readonly property color pipColor: !step ? root.muted
+                                    : (stepOk ? root.okColor
+                                              : (stepWarn ? root.warnColor : root.alarmColor))
+
+    Layout.fillWidth: true
+    implicitHeight: stepCol.implicitHeight + Style.space(24)
+    radius: root.radiusVal
+    color: root.cardBg
+    border.color: stepOk ? root.cardBorder : pipColor
+
+    ColumnLayout {
+      id: stepCol
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: parent.top
+      anchors.margins: Style.space(12)
+      spacing: Style.space(6)
+
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: Style.space(8)
+
+        Rectangle {
+          implicitWidth: Style.space(10)
+          implicitHeight: Style.space(10)
+          radius: width / 2
+          color: stepCard.pipColor
+        }
+        Body {
+          Layout.fillWidth: true
+          text: stepCard.step && stepCard.step.title ? stepCard.step.title : ""
+          font.bold: true
+        }
+        Caption {
+          text: !stepCard.step ? ""
+                : (stepCard.stepOk ? "Ready"
+                                   : (stepCard.step.required ? "Required" : "Optional"))
+          color: stepCard.pipColor
+          font.bold: true
+        }
+      }
+
+      Caption {
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        text: stepCard.step && stepCard.step.hint ? stepCard.step.hint : ""
+      }
+
+      Body {
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        text: stepCard.step && stepCard.step.detail ? stepCard.step.detail : ""
+        color: stepCard.stepOk ? root.muted : root.foreground
+      }
+
+      ActionButton {
+        visible: stepCard.step && !stepCard.stepOk && stepCard.step.fixable === true
+        Layout.fillWidth: true
+        primary: stepCard.step && stepCard.step.required === true
+        active: !root.setupBusy
+        label: {
+          if (!stepCard.step) return ""
+          if (root.setupFixing === stepCard.step.action)
+            return stepCard.step.needsPassword ? "Waiting for password…" : "Working…"
+          return stepCard.step.button || "Fix"
+        }
+        onActivated: stepCard.fixRequested()
+      }
     }
   }
 
@@ -512,6 +654,38 @@ BarWidget {
     if (!statusProcess.running) statusProcess.running = true
   }
 
+  function applySetupStatus(output) {
+    try {
+      var res = JSON.parse(output)
+      if (!res || !res.steps) return
+      root.setupStatus = res
+      root.setupChecked = true
+      root.setupReady = res.ok === true
+      if (root.popupOpen && !root.setupReady && !root.setupAutoOpened) {
+        root.activeTab = 2
+        root.setupAutoOpened = true
+      }
+    } catch (e) {
+      // Leave the last good checklist on screen.
+    }
+  }
+
+  function refreshSetup() {
+    if (root.setupBusy) return
+    if (!setupStatusProcess.running) setupStatusProcess.running = true
+  }
+
+  function runSetupFix(action) {
+    if (root.setupBusy) return
+    var target = action || "all"
+    root.setupFixing = target
+    root.setupFixMessage = (target === "firewall" || target === "all" || target === "avahi")
+                           ? "A system password prompt should appear."
+                           : "Starting the background daemon…"
+    setupFixProcess.args = ["--fix-" + target]
+    setupFixProcess.running = true
+  }
+
   function regeneratePin() {
     if (!regenProcess.running) regenProcess.running = true
   }
@@ -623,6 +797,33 @@ BarWidget {
     }
   }
 
+  ServerCommand {
+    id: setupStatusProcess
+    args: ["--setup-status"]
+    onFinished: function(output) {
+      root.applySetupStatus(output)
+    }
+  }
+
+  SetupCommand {
+    id: setupFixProcess
+    onFinished: function(exitCode, output) {
+      root.setupFixing = ""
+      if (exitCode === 0) {
+        root.setupFixMessage = ""
+      } else {
+        var tail = String(output || "").trim()
+        var lines = tail.split("\n")
+        var last = lines.length ? lines[lines.length - 1] : ""
+        root.setupFixMessage = last
+                               ? last
+                               : "That did not finish. If a password prompt appeared, it may have been cancelled."
+      }
+      root.refreshSetup()
+      root.refreshData()
+    }
+  }
+
   // ------------------------------------------------------------- Timers
 
   Timer {
@@ -657,6 +858,14 @@ BarWidget {
     repeat: true
     running: true
     onTriggered: root.refreshData()
+  }
+
+  Timer {
+    interval: root.popupOpen ? 4000 : 15000
+    repeat: true
+    running: true
+    triggeredOnStart: true
+    onTriggered: root.refreshSetup()
   }
 
   Component.onCompleted: root.refreshData()
@@ -721,7 +930,8 @@ BarWidget {
         // so it gets the alarming colour rather than a cautious amber. Nothing
         // paired yet is not a fault, so that one stays muted.
         readonly property color statusColor: root.watchOnline ? root.okColor
-                                           : (root.watchLinked ? root.alarmColor : root.muted)
+                                           : (root.setupChecked && !root.setupReady ? root.warnColor
+                                           : (root.watchLinked ? root.alarmColor : root.muted))
         readonly property color inkColor: root.watchLinked ? root.foreground : root.muted
 
         onStatusColorChanged: robot.requestPaint()
@@ -852,7 +1062,8 @@ BarWidget {
         visible: text !== ""
         font.pixelSize: Style.font.body
         font.bold: true
-        text: root.watchLinked ? "" : "AI Watch"
+        text: (root.setupChecked && !root.setupReady) ? "Setup"
+              : (root.watchLinked ? "" : "AI Watch")
       }
     }
   }
@@ -867,6 +1078,13 @@ BarWidget {
     onOpenChanged: {
       if (root.popupOpen !== open) {
         root.popupOpen = open
+      }
+      if (open) {
+        root.refreshSetup()
+        if (root.setupChecked && !root.setupReady && !root.setupAutoOpened) {
+          root.activeTab = 2
+          root.setupAutoOpened = true
+        }
       }
     }
     focusTarget: keyCatcher
@@ -905,33 +1123,48 @@ BarWidget {
         anchors.fill: parent
         spacing: Style.space(12)
 
-        // Header with Title and Tabs
+        // Title on its own row so the three tabs never get clipped off the
+        // right edge of the panel (PAIRING + LLM SLOTS already filled the old
+        // single header line).
         RowLayout {
           Layout.fillWidth: true
-          spacing: Style.space(8)
+          spacing: Style.space(4)
 
-          RowLayout {
-            spacing: Style.space(4)
-
-            Body {
-              text: "OMARCHY AI WATCH"
-              font.pixelSize: Style.font.heading
-              font.letterSpacing: 1
-            }
-            // Idle terminal caret. It only blinks while the panel is open.
-            Rectangle {
-              implicitWidth: Style.space(7)
-              implicitHeight: Style.font.heading
-              color: root.accent
-              opacity: root.caretOn ? 0.9 : 0.0
-              Behavior on opacity { NumberAnimation { duration: 90 } }
-            }
+          Body {
+            text: "OMARCHY AI WATCH"
+            font.pixelSize: Style.font.heading
+            font.letterSpacing: 1
           }
-
+          Rectangle {
+            implicitWidth: Style.space(7)
+            implicitHeight: Style.font.heading
+            color: root.accent
+            opacity: root.caretOn ? 0.9 : 0.0
+            Behavior on opacity { NumberAnimation { duration: 90 } }
+          }
           Item { Layout.fillWidth: true }
+        }
 
-          PanelTab { label: "PAIRING"; index: 0; implicitWidth: Style.space(80) }
-          PanelTab { label: "LLM SLOTS"; index: 1 }
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
+
+          PanelTab {
+            Layout.fillWidth: true
+            label: "PAIRING"
+            index: 0
+          }
+          PanelTab {
+            Layout.fillWidth: true
+            label: "LLM SLOTS"
+            index: 1
+          }
+          PanelTab {
+            Layout.fillWidth: true
+            label: (root.setupChecked && !root.setupReady) ? "SETUP !" : "SETUP"
+            index: 2
+            alert: root.setupChecked && !root.setupReady
+          }
         }
 
         // ======================== TAB 0: WATCH STATUS & PAIRING ========================
@@ -940,6 +1173,45 @@ BarWidget {
           Layout.fillWidth: true
           Layout.fillHeight: true
           spacing: Style.space(12)
+
+          // Laptop-side setup is not done. Pairing a watch will fail until it is,
+          // so this sits above the status card the way a pending request does.
+          Rectangle {
+            visible: root.setupChecked && !root.setupReady
+            Layout.fillWidth: true
+            implicitHeight: setupBannerCol.implicitHeight + Style.space(24)
+            radius: root.radiusVal
+            color: Qt.rgba(root.warnColor.r, root.warnColor.g, root.warnColor.b, 0.10)
+            border.color: root.warnColor
+
+            ColumnLayout {
+              id: setupBannerCol
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.top: parent.top
+              anchors.margins: Style.space(12)
+              spacing: Style.space(6)
+
+              Body {
+                text: "This laptop is not reachable from a watch yet"
+                font.bold: true
+                color: root.warnColor
+              }
+              Caption {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: root.setupMissingSummary !== ""
+                      ? ("Missing: " + root.setupMissingSummary + ".")
+                      : "Open Setup to finish installing the bridge."
+              }
+              ActionButton {
+                Layout.fillWidth: true
+                primary: true
+                label: "Open setup"
+                onActivated: root.activeTab = 2
+              }
+            }
+          }
 
           // The two halves have drifted. Shown above the status card because a
           // watch that is talking but misreading the wire format looks perfectly
@@ -1273,10 +1545,11 @@ BarWidget {
                     text: "How to connect:"
                     font.bold: true
                   }
-                  Caption { text: "1. Turn on Wi-Fi on your watch, same network as this laptop." }
-                  Caption { text: "2. Open Omarchy AI on the watch and tap Connect." }
+                  Caption { text: "1. Finish Setup if this panel flagged it — daemon and firewall." }
+                  Caption { text: "2. Turn on Wi-Fi on your watch, same network as this laptop." }
+                  Caption { text: "3. Open Omarchy AI on the watch and tap Connect." }
                   Caption {
-                    text: "3. Approve it here. A notification pops up, or use the prompt above."
+                    text: "4. Approve it here. A notification pops up, or use the prompt above."
                     color: root.accent
                   }
                   Caption { text: "Adding another watch later? Click 'Add another watch' first." }
@@ -1551,6 +1824,140 @@ BarWidget {
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+
+        // ======================== TAB 2: LAPTOP SETUP ========================
+        Flickable {
+          visible: root.activeTab === 2
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          clip: true
+          contentWidth: width
+          contentHeight: setupCol.implicitHeight
+          boundsBehavior: Flickable.StopAtBounds
+          interactive: contentHeight > height
+
+          ColumnLayout {
+            id: setupCol
+            width: parent.width
+            spacing: Style.space(10)
+
+            Body {
+              text: root.setupReady ? "This laptop is ready" : "Set up this laptop"
+              font.pixelSize: Style.font.subtitle
+              font.bold: true
+              color: root.setupReady ? root.okColor : root.foreground
+            }
+
+            Caption {
+              Layout.fillWidth: true
+              wrapMode: Text.WordWrap
+              text: root.setupReady
+                    ? "The watch can reach this machine. Keep this tab for a re-check if discovery ever fails."
+                    : "The watch finds this laptop on Wi-Fi. These three things have to be true on the laptop before Connect on the watch will see anything."
+            }
+
+            Caption {
+              visible: root.setupStatus && root.setupStatus.lanIp
+              text: "This laptop: "
+                    + (root.setupStatus.lanIp || "")
+                    + ":"
+                    + (root.setupStatus.port || 8765)
+              color: root.accent
+            }
+
+            Caption {
+              visible: root.setupFixMessage !== ""
+              Layout.fillWidth: true
+              wrapMode: Text.WordWrap
+              text: root.setupFixMessage
+              color: root.warnColor
+            }
+
+            ActionButton {
+              visible: root.setupHasFixable
+              Layout.fillWidth: true
+              primary: true
+              active: !root.setupBusy
+              label: root.setupFixing === "all"
+                     ? "Waiting for password…"
+                     : "Set up this laptop"
+              onActivated: root.runSetupFix("all")
+            }
+
+            Caption {
+              visible: root.setupHasFixable
+              Layout.fillWidth: true
+              wrapMode: Text.WordWrap
+              text: "Unlocking the firewall asks for your password once. The daemon runs as you, not as root."
+            }
+
+            Repeater {
+              model: root.setupSteps
+
+              SetupStep {
+                required property var modelData
+                Layout.fillWidth: true
+                step: modelData
+                onFixRequested: root.runSetupFix(modelData.action)
+              }
+            }
+
+            Rectangle {
+              Layout.fillWidth: true
+              height: 1
+              color: root.cardBorder
+            }
+
+            Body {
+              text: "On the watch"
+              font.bold: true
+            }
+
+            Repeater {
+              model: root.setupTips
+
+              ColumnLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: Style.space(2)
+
+                Body {
+                  Layout.fillWidth: true
+                  wrapMode: Text.WordWrap
+                  text: modelData.title
+                  font.bold: true
+                }
+                Caption {
+                  Layout.fillWidth: true
+                  wrapMode: Text.WordWrap
+                  text: modelData.body
+                }
+              }
+            }
+
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: Style.space(8)
+
+              ActionButton {
+                implicitWidth: Style.space(110)
+                active: !root.setupBusy
+                label: "Recheck"
+                onActivated: root.refreshSetup()
+              }
+
+              Item { Layout.fillWidth: true }
+
+              Caption {
+                text: root.setupBusy ? "Working…"
+                      : (root.setupChecked
+                         ? (root.setupReady ? "All required steps are done." : "Fix the red steps, then Recheck.")
+                         : "Checking this laptop…")
+                color: root.setupReady ? root.okColor : root.muted
               }
             }
           }

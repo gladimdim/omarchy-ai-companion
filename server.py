@@ -12,6 +12,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import socket
 import socketserver
 import subprocess
@@ -134,6 +135,216 @@ def get_local_ip() -> str:
     finally:
         s.close()
     return ip
+
+
+def _run_quiet(args: List[str], timeout: float = 2) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        args, capture_output=True, text=True, timeout=timeout, check=False,
+    )
+
+
+def _cmd_ok(args: List[str], timeout: float = 2) -> bool:
+    try:
+        return _run_quiet(args, timeout=timeout).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def _ufw_enabled() -> bool:
+    conf = Path("/etc/ufw/ufw.conf")
+    if not conf.is_file():
+        return False
+    try:
+        return any(line.strip() == "ENABLED=yes" for line in conf.read_text().splitlines())
+    except OSError:
+        return False
+
+
+def _ufw_allows(proto: str, port: int) -> bool:
+    rules = Path("/etc/ufw/user.rules")
+    if not rules.is_file():
+        return False
+    try:
+        text = rules.read_text()
+    except OSError:
+        return False
+    return re.search(rf"-p {re.escape(proto)} .*--dport {port} -j ACCEPT", text) is not None
+
+
+def _bridge_ping(port: int) -> Optional[Dict[str, Any]]:
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/v1/ping", timeout=1) as resp:
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+
+def collect_setup_status(port: int = PORT) -> Dict[str, Any]:
+    """What the widget installer draws: each laptop-side step, and whether it is ok.
+
+    Kept fast on purpose. The widget polls this while the panel is open, so it
+    must not run avahi-browse or anything else that waits on the network.
+    """
+    lan_ip = get_local_ip()
+    python_ok = shutil.which("python3") is not None
+    unit_active = _cmd_ok(["systemctl", "--user", "is-active", "--quiet",
+                           "omarchy-wearos-server.service"])
+    unit_enabled = _cmd_ok(["systemctl", "--user", "is-enabled", "--quiet",
+                            "omarchy-wearos-server.service"])
+    ping = _bridge_ping(port)
+    listening = ping is not None
+    daemon_ok = python_ok and unit_active and listening
+
+    if not python_ok:
+        daemon_detail = "python3 is not on PATH."
+        daemon_fixable = False
+    elif not unit_active and not listening:
+        daemon_detail = "The background service is not running. The watch has nothing to connect to."
+        daemon_fixable = True
+    elif unit_active and not listening:
+        daemon_detail = "The service is up but nothing answered on port %d. Check the journal." % port
+        daemon_fixable = True
+    elif listening and not unit_active:
+        daemon_detail = "Something is answering on port %d, but the user systemd unit is not active." % port
+        daemon_fixable = True
+    else:
+        daemon_detail = "Running on %s:%d%s." % (
+            lan_ip, port, " and enabled at login" if unit_enabled else "",
+        )
+        daemon_fixable = False
+
+    ufw_on = _ufw_enabled()
+    firewalld_on = _cmd_ok(["systemctl", "is-active", "--quiet", "firewalld"])
+    ufw_tcp = _ufw_allows("tcp", port) if ufw_on else False
+    ufw_udp = _ufw_allows("udp", 5353) if ufw_on else False
+    firewalld_tcp = (
+        _cmd_ok(["firewall-cmd", "--query-port=%d/tcp" % port]) if firewalld_on else False
+    )
+
+    if ufw_on:
+        firewall_kind = "ufw"
+        firewall_ok = ufw_tcp
+        firewall_fixable = not ufw_tcp
+        if ufw_tcp and ufw_udp:
+            firewall_detail = "UFW allows TCP %d and UDP 5353." % port
+        elif ufw_tcp:
+            firewall_detail = "UFW allows TCP %d. UDP 5353 is not explicitly open (multicast mDNS may still work)." % port
+        else:
+            firewall_detail = (
+                "UFW is on and is dropping TCP %d from the network. "
+                "The watch's scan and any mDNS hit will be blocked." % port
+            )
+    elif firewalld_on:
+        firewall_kind = "firewalld"
+        firewall_ok = firewalld_tcp
+        firewall_fixable = not firewalld_tcp
+        firewall_detail = (
+            "firewalld allows TCP %d." % port
+            if firewalld_tcp
+            else "firewalld is on and does not allow TCP %d." % port
+        )
+    else:
+        firewall_kind = "none"
+        firewall_ok = True
+        firewall_fixable = False
+        firewall_detail = "No UFW or firewalld is active. Nothing to unlock."
+
+    avahi_bin = shutil.which("avahi-publish") or "/usr/bin/avahi-publish"
+    avahi_present = os.path.isfile(avahi_bin)
+    avahi_daemon = _cmd_ok(["systemctl", "is-active", "--quiet", "avahi-daemon"])
+    avahi_publishing = _cmd_ok(["pgrep", "-f", r"avahi-publish.*_omarchy-ai"])
+    mdns_ok = avahi_present and avahi_daemon and avahi_publishing
+    if not avahi_present:
+        mdns_detail = "avahi-publish is not installed. The watch can still find the laptop by scanning the subnet."
+        mdns_fixable = False
+    elif not avahi_daemon:
+        mdns_detail = "avahi-daemon is stopped, so the laptop is not advertising. Subnet scan still works if the firewall is open."
+        mdns_fixable = True
+    elif not avahi_publishing:
+        mdns_detail = "Avahi is up, but this bridge is not advertising yet. Start the daemon; it launches avahi-publish."
+        mdns_fixable = False
+    else:
+        mdns_detail = "Advertising _omarchy-ai._tcp on %s:%d." % (lan_ip, port)
+        mdns_fixable = False
+
+    steps = [
+        {
+            "id": "daemon",
+            "title": "Background daemon",
+            "ok": daemon_ok,
+            "required": True,
+            "fixable": daemon_fixable,
+            "action": "daemon",
+            "button": "Start daemon",
+            "detail": daemon_detail,
+            "hint": (
+                "The watch talks to a small Python service on this laptop. The bar "
+                "widget does not start it — it has to run as a user systemd service "
+                "so it stays up after you close this panel."
+            ),
+        },
+        {
+            "id": "firewall",
+            "title": "Firewall",
+            "ok": firewall_ok,
+            "required": True,
+            "fixable": firewall_fixable,
+            "action": "firewall",
+            "button": "Unlock firewall",
+            "needsPassword": firewall_fixable,
+            "detail": firewall_detail,
+            "hint": (
+                "Omarchy's firewall denies incoming connections by default. The watch "
+                "is on Wi-Fi, so it is incoming. Opening TCP %d lets it through. "
+                "A system password prompt will appear." % port
+            ),
+        },
+        {
+            "id": "mdns",
+            "title": "Watch discovery",
+            "ok": mdns_ok,
+            "required": False,
+            "fixable": mdns_fixable,
+            "action": "avahi",
+            "button": "Start discovery",
+            "needsPassword": bool(avahi_present and not avahi_daemon),
+            "detail": mdns_detail,
+            "hint": (
+                "The watch first looks for _omarchy-ai._tcp over mDNS, then sweeps "
+                "the subnet for TCP %d. Discovery is a shortcut. The daemon and "
+                "firewall are what actually have to work." % port
+            ),
+        },
+    ]
+    required_ok = all(step["ok"] for step in steps if step["required"])
+    return {
+        "ok": required_ok,
+        "lanIp": lan_ip,
+        "port": port,
+        "mdnsPort": 5353,
+        "service": SERVICE_NAME,
+        "firewall": firewall_kind,
+        "unitActive": unit_active,
+        "unitEnabled": unit_enabled,
+        "steps": steps,
+        "tips": [
+            {
+                "id": "wifi",
+                "title": "Same Wi-Fi, not a guest network",
+                "body": "The watch and this laptop must share a LAN. Guest / AP-isolated SSIDs block device-to-device traffic.",
+            },
+            {
+                "id": "watch-radio",
+                "title": "Turn Wi-Fi on on the watch",
+                "body": "A Galaxy Watch parks its Wi-Fi radio while it is on Bluetooth. Open the watch Wi-Fi settings and wait until it has an address.",
+            },
+            {
+                "id": "connect",
+                "title": "Tap Connect, then approve here",
+                "body": "Open Omarchy AI on the watch and tap Connect. This panel (or a desktop notification) asks you to approve. Nothing is typed on the watch.",
+            },
+        ],
+    }
 
 
 def utc_now_iso() -> str:
@@ -778,30 +989,42 @@ def get_watch_summary_data() -> Dict[str, Any]:
 def notify_pair_request(request_id: str, device_name: str):
     """Put the connect request in front of the user, wherever they are looking.
 
-    Omarchy's own notifier is preferred because it supports a click action, so
-    approving is one click straight from the notification. notify-send is the
-    fallback on a plain desktop.
+    Omarchy's notifier supports a click action, so approving is one click from
+    the toast. It also has Do Not Disturb: only `omarchy-action` (the default
+    app name) and critical `notify-send` bypass it. A custom app name is how
+    this prompt used to vanish while DND was on.
+
+    The process is waited on. Spawning `omarchy` and immediately returning
+    treated a failing child as success, so notify-send never ran as fallback.
     """
     headline = "A watch wants to connect"
+    body = f"{device_name} — click to approve"
     approve_cmd = [sys.executable, os.path.abspath(__file__), "--approve", request_id]
+    omarchy_bin = shutil.which("omarchy") or "/usr/share/omarchy/bin/omarchy"
 
     candidates = [
-        ["omarchy", "notification", "send",
-         "--app-name", "Omarchy AI Watch",
+        [omarchy_bin, "notification", "send",
          "-u", "critical",
          "-t", str(StateManager.PAIR_REQUEST_TTL * 1000),
-         headline, f"{device_name} - click to approve",
+         headline, body,
          "--exec"] + approve_cmd,
-        ["notify-send", "-a", "Omarchy AI Watch", "-u", "critical",
-         headline, f"{device_name} - approve it in the AI Watch widget"],
+        ["notify-send", "-u", "critical",
+         headline, f"{device_name} — approve it in the AI Watch widget"],
     ]
 
     for cmd in candidates:
         try:
-            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return
-        except Exception:
+            completed = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=5, check=False,
+            )
+        except Exception as exc:
+            print(f"Pair notification error ({cmd[0]}): {exc}")
             continue
+        if completed.returncode == 0:
+            print(f"Pair notification sent via {cmd[0]}: {device_name} id={request_id}")
+            return
+        err = (completed.stderr or completed.stdout or "").strip()
+        print(f"Pair notification failed ({cmd[0]} exit {completed.returncode}): {err}")
 
 
 class AttemptLimiter:
@@ -1128,6 +1351,7 @@ class ApiHandler(http.server.BaseHTTPRequestHandler):
                 clean_device_name(body.get("deviceName")) or "A watch", peer)
             if req["status"] == "pending":
                 request_attempts.record_failure(peer)
+                print(f"Pair request from {peer}: {req['device']} id={req['id']}")
                 notify_pair_request(req["id"], req["device"])
             self._send_json(202, {
                 "status": "pending",
@@ -1312,6 +1536,8 @@ def main():
     parser.add_argument("--pin", action="store_true", help="Print active PIN")
     parser.add_argument("--new-pin", action="store_true", help="Generate and print new PIN")
     parser.add_argument("--status", action="store_true", help="Print current status JSON")
+    parser.add_argument("--setup-status", action="store_true",
+                        help="Print laptop installer checks as JSON")
     parser.add_argument("--models", action="store_true", help="Print available dynamic models")
     parser.add_argument("--set-slot", nargs=2, metavar=("SLOT", "MODEL_ID"),
                         help="Assign a model to one of the four gauges")
@@ -1333,10 +1559,14 @@ def main():
         print(state_mgr.generate_new_pin())
         return
 
+    if args.setup_status:
+        print(json.dumps(collect_setup_status(args.port)))
+        return
+
     if args.status:
         status = full_status()
         # Read the pending request from the daemon, which owns it.
-        live = ask_daemon(args.port, "/api/v1/pair/state", timeout=3)
+        live = ask_daemon(args.port, "/api/v1/pair/state", timeout=1)
         status["pendingRequest"] = live.get("pendingRequest")
         status["pairingOpen"] = live.get("pairingOpen", False)
         status["pairingSecondsRemaining"] = live.get("secondsRemaining", 0)
