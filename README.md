@@ -101,6 +101,15 @@ systemctl --user enable --now omarchy-wearos-server.service
 The daemon listens on `0.0.0.0:8765` as your user, never as root. State lives
 in `~/.local/state/omarchy/wearos/` (`0600`).
 
+## Play Store
+
+This repo is **not** a Play app. The Wear OS app and the watch face are two
+separate Play listings, published from
+[`ai-omarchy-wearos/store`](https://github.com/gladimdim/ai-omarchy-wearos/tree/main/store).
+
+What you do here around a Play submission (privacy policy URL, reviewer setup,
+`PLAY_URL` after the Wear OS app is live) is in [`store/README.md`](store/README.md).
+
 ## Remove
 
 ```bash
