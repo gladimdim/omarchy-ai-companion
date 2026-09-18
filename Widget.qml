@@ -108,6 +108,9 @@ BarWidget {
   property bool setupChecked: false
   property bool setupReady: true
   property bool setupAutoOpened: false
+  // The daemon needs no password, so the widget starts it on its own the first
+  // time it sees it down. The firewall still needs one click + password.
+  property bool setupDaemonAutoTried: false
   property string setupFixing: ""
   property string setupFixMessage: ""
   readonly property bool setupBusy: setupFixing !== ""
@@ -664,6 +667,20 @@ BarWidget {
       if (root.popupOpen && !root.setupReady && !root.setupAutoOpened) {
         root.activeTab = 2
         root.setupAutoOpened = true
+      }
+      // Passwordless part runs itself: if the daemon is down, start it once
+      // per shell load. Firewall/avahi still wait for an explicit click
+      // because they pop a password prompt.
+      if (!root.setupDaemonAutoTried && !root.setupBusy) {
+        var steps = res.steps || []
+        for (var i = 0; i < steps.length; i++) {
+          if (steps[i] && steps[i].id === "daemon"
+              && !steps[i].ok && steps[i].fixable) {
+            root.setupDaemonAutoTried = true
+            root.runSetupFix("daemon")
+            break
+          }
+        }
       }
     } catch (e) {
       // Leave the last good checklist on screen.

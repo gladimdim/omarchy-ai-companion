@@ -444,41 +444,39 @@
   <div class="wrap">
     <div class="sec-head">
       <h2>Install</h2>
-      <p>Two pieces on the laptop: the dock widget, and the daemon that feeds it.</p>
+      <p>One command, then two clicks. No files to copy, no services to wire up by hand — the widget finishes the laptop setup itself.</p>
     </div>
 
     <div class="steps">
       <div class="step">
         <div class="step-n">1</div>
         <div>
-          <h3>Link the plugin into Omarchy</h3>
-          <pre><span class="c"># from a clone of this repo</span>
-ln -s "$(pwd)" ~/.config/omarchy/plugins/gladimdim.omarchy-ai-watch
-omarchy restart shell</pre>
+          <h3>Add the plugin</h3>
+          <pre>omarchy plugin add https://github.com/gladimdim/omarchy-ai-companion.git --enable</pre>
         </div>
       </div>
 
       <div class="step">
         <div class="step-n">2</div>
         <div>
-          <h3>Run the bridge as a user service</h3>
-          <pre>mkdir -p ~/.config/systemd/user
-cp omarchy-wearos-server.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now omarchy-wearos-server.service</pre>
+          <h3>Click “Set up this laptop” in the widget</h3>
+          <p style="color:var(--fg-dim);margin:0 0 12px">
+            Open the <b>AI Watch</b> widget in the bar → <b>Setup</b> tab →
+            <b>Set up this laptop</b>. That one button starts the background
+            daemon, starts discovery, and unlocks the firewall (one system
+            password prompt for the firewall step). The daemon starts on its own
+            the first time you open the widget — the button is there for the
+            firewall and for a re-check.
+          </p>
+          <p style="color:var(--fg-dim);margin:0">
+            Prefer a terminal? This does the same thing:
+          </p>
+          <pre>~/.config/omarchy/plugins/gladimdim.omarchy-ai-watch/setup.sh</pre>
         </div>
       </div>
 
       <div class="step">
         <div class="step-n">3</div>
-        <div>
-          <h3>Check it is up</h3>
-          <pre>python3 server.py --status</pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-n">4</div>
         <div>
           <h3>Connect the watch</h3>
           <p style="color:var(--fg-dim);margin:0">

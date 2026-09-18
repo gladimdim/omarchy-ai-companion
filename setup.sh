@@ -25,6 +25,8 @@ Usage: $(basename "$0") [--check] [--json] [--fix WHAT] [--remove]
 
   (no args)        Enable the user daemon, open the firewall if one is active,
                    and verify the bridge is reachable on this laptop's LAN address.
+                   This is what the widget's Setup tab runs when you click
+                   "Set up this laptop".
   --check          Print diagnostics only. Makes no changes.
   --check --json   Same checks as JSON (what the bar widget polls).
   --fix daemon     Install and start the user systemd unit. No root.
@@ -251,7 +253,7 @@ check() {
     ok "user unit $UNIT_NAME is active"
   else
     bad "user unit $UNIT_NAME is not running"
-    info "The bar widget does not start the daemon. Run this script with no args."
+    info "Click \"Set up this laptop\" in the widget's Setup tab, or run this script with no args."
     failed=1
   fi
 

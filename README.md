@@ -8,15 +8,22 @@ The watch app lives in [`ai-omarchy-wearos`](https://github.com/gladimdim/ai-oma
 
 ## Install
 
+One command, then two clicks:
+
 ```bash
 omarchy plugin add https://github.com/gladimdim/omarchy-ai-companion.git --enable
 ```
 
-Open the **AI Watch** widget in the bar and use the **Setup** tab. It checks the
-daemon, the firewall, and mDNS, explains each one, and has buttons to fix what
-is missing (firewall changes pop a system password prompt).
+1. Open the **AI Watch** widget in the bar → **Setup** tab → **Set up this laptop**.
+   That one button starts the background daemon, starts discovery, and unlocks
+   the firewall (one system password prompt for the firewall step).
+2. Click **Add watch**, then open Omarchy AI on the watch and tap **Connect**.
 
-The same steps from a terminal:
+The daemon also starts itself the first time you open the widget — the Setup
+button is there for the firewall step and for a re-check. Re-run it any time;
+it is idempotent.
+
+Terminal equivalent of the Setup button (same script the widget runs):
 
 ```bash
 ~/.config/omarchy/plugins/gladimdim.omarchy-ai-watch/setup.sh
@@ -46,9 +53,9 @@ Wi-Fi**.
 
 ## What the watch actually needs
 
-The bar widget only talks to the daemon on localhost. It does **not** start it.
-The watch finds the laptop in two ways, both of which fail if TCP 8765 is
-closed to the LAN:
+The bar widget talks to the daemon on localhost, and the Setup tab starts the
+daemon for you. The watch finds the laptop in two ways, both of which fail if
+TCP 8765 is closed to the LAN:
 
 | Path | Port | Role |
 | --- | --- | --- |
@@ -95,7 +102,7 @@ systemctl --user enable --now omarchy-wearos-server.service
 | Symptom | Likely cause |
 | --- | --- |
 | Widget shows a PIN / status, watch finds nothing | Firewall blocking **TCP 8765** from the LAN (localhost still works) |
-| `setup.sh --check` says the user unit is not running | Daemon never enabled; the widget does not launch it |
+| `setup.sh --check` says the user unit is not running | Daemon never enabled; open the widget's Setup tab and click **Set up this laptop** (it starts on its own on first open) |
 | `avahi-browse` does not list `_omarchy-ai._tcp` | `avahi-daemon` stopped, or `avahi-publish` missing (`sudo pacman -S avahi`) |
 | Watch says it is not on Wi-Fi | Galaxy Watch parks Wi-Fi while tethered over Bluetooth — turn Wi-Fi on on the watch |
 | Same SSID, still invisible | Guest / AP isolation on the router: clients cannot talk to each other |

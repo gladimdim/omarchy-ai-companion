@@ -278,9 +278,9 @@ def collect_setup_status(port: int = PORT) -> Dict[str, Any]:
             "button": "Start daemon",
             "detail": daemon_detail,
             "hint": (
-                "The watch talks to a small Python service on this laptop. The bar "
-                "widget does not start it — it has to run as a user systemd service "
-                "so it stays up after you close this panel."
+                "The watch talks to a small Python service on this laptop. It runs "
+                "as a user systemd service so it stays up after you close this "
+                "panel. The widget starts it for you — no terminal needed."
             ),
         },
         {
