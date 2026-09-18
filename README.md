@@ -109,6 +109,12 @@ This repo is **not** a Play app. The Wear OS app and the watch face are two
 separate Play listings, published from
 [`ai-omarchy-wearos/store`](https://github.com/gladimdim/ai-omarchy-wearos/tree/main/store).
 
+- ✅ Watch face **live**: [Omarchy AI Usage Watchface](https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch.watchface)
+  (`com.gladimdim.omarchy.ai.watch.watchface`) — needs Wear OS 5+.
+- ⏳ Wear OS app **in review, not yet on Play** (`com.gladimdim.omarchy.ai.watch`).
+  Until it is approved, sideload it from `ai-omarchy-wearos` or use PIN `0000`
+  demo mode for review.
+
 What you do here around a Play submission (privacy policy URL, reviewer setup,
 `PLAY_URL` after the Wear OS app is live) is in [`store/README.md`](store/README.md).
 

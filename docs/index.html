@@ -195,17 +195,17 @@
     background: var(--card); border: 1px solid var(--line);
     border-radius: 14px; padding: 22px; text-align: center;
   }
-  #qr-slot {
+  #qr-slot, #qr-slot-face {
     width: 190px; height: 190px; margin: 0 auto 16px;
     display: grid; place-items: center;
     border-radius: 10px; background: #fff; padding: 10px;
   }
-  #qr-slot.empty {
+  #qr-slot.empty, #qr-slot-face.empty {
     background: transparent; border: 2px dashed var(--line);
     color: var(--fg-faint); font-family: var(--mono);
     font-size: 12px; line-height: 1.7; padding: 20px;
   }
-  #qr-slot canvas, #qr-slot img { width: 100%; height: 100%; display: block; }
+  #qr-slot canvas, #qr-slot img, #qr-slot-face canvas, #qr-slot-face img { width: 100%; height: 100%; display: block; }
   .qr-label { font-size: 14px; color: var(--fg-dim); margin: 0; }
   .badge-soon {
     display: inline-block; font-family: var(--mono); font-size: 11.5px;
@@ -275,7 +275,7 @@
       </p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#install">Install the plugin</a>
-        <a class="btn btn-ghost" href="#watch-app">Get the watch app</a>
+        <a class="btn btn-ghost" href="#watch-app">Get the watch face · Live on Play</a>
       </div>
     </div>
     <div>
@@ -496,11 +496,13 @@ systemctl --user enable --now omarchy-wearos-server.service</pre>
 <section id="watch-app">
   <div class="wrap">
     <div class="sec-head">
-      <h2>The watch app</h2>
+      <h2>The watch face &amp; watch app</h2>
       <p>
-        The app rides along with the face. It is where the numbers arrive, where
-        you check the link to the laptop, and where you decide which limit each
-        of the four gauges is drawing.
+        The <b>watch face is live on Google Play</b> — install it on your watch
+        today. The companion <b>watch app is in Play review</b> and will appear
+        here the moment it is approved. The app is where the numbers arrive,
+        where you check the link to the laptop, and where you decide which limit
+        each of the four gauges is drawing.
       </p>
     </div>
 
@@ -534,7 +536,9 @@ systemctl --user enable --now omarchy-wearos-server.service</pre>
     <div class="app-grid">
       <div>
         <ul class="plain">
-          <li><b>Wear OS 5+</b>, tested on a Galaxy Watch (SM-L705F).</li>
+          <li><b>Watch face — live on Google Play.</b> <a href="https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch.watchface">Omarchy AI Usage Watchface</a> (<code>com.gladimdim.omarchy.ai.watch.watchface</code>). Wear OS 5+, free, Personalization.</li>
+          <li><b>Watch app — in Play review, not yet available.</b> <code>com.gladimdim.omarchy.ai.watch</code>. This is the listing the QR below is waiting for.</li>
+          <li><b>Wear OS 5+</b> for the face, tested on a Galaxy Watch (SM-L705F).</li>
           <li><b>Same Wi-Fi as the laptop.</b> A Galaxy Watch parks its Wi-Fi radio while tethered to a phone over Bluetooth; the app says so and offers the Wi-Fi settings screen.</li>
           <li><b>No phone app needed.</b> The watch talks to the laptop directly.</li>
           <li>Prefer to build it yourself? The watch side lives in
@@ -542,9 +546,15 @@ systemctl --user enable --now omarchy-wearos-server.service</pre>
         </ul>
       </div>
 
-      <div class="qr-box">
-        <div id="qr-slot" class="empty">QR code appears here<br>once the Play Store<br>link is set</div>
-        <p class="qr-label" id="qr-label"><span class="badge-soon">Coming to Google Play</span></p>
+      <div>
+        <div class="qr-box" style="margin-bottom:16px">
+          <div id="qr-slot-face" class="empty">Loading QR…</div>
+          <p class="qr-label" id="qr-label-face"><span class="badge-soon">Live on Google Play</span></p>
+        </div>
+        <div class="qr-box">
+          <div id="qr-slot" class="empty">QR code appears here<br>once the Play Store<br>link is set</div>
+          <p class="qr-label" id="qr-label"><span class="badge-soon">Watch app · in review</span></p>
+        </div>
       </div>
     </div>
   </div>
@@ -562,21 +572,50 @@ systemctl --user enable --now omarchy-wearos-server.service</pre>
 
 <!--
   ============================================================================
-  TO TURN ON THE PLAY STORE QR CODE: put the listing URL in PLAY_URL below.
-  Nothing else needs changing. The page draws the QR itself, swaps the badge
-  for a real button, and the "Coming to Google Play" state disappears.
-
-      const PLAY_URL = "https://play.google.com/store/apps/details?id=..."
+  PLAY STORE LINKS:
+  - WATCHFACE_URL is LIVE: https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch.watchface
+  - PLAY_URL is the Wear OS *app* listing. It stays empty until that listing is
+    approved. Then set it to:
+      const PLAY_URL = "https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch"
+    Nothing else needs changing. The page draws the QR itself, swaps the badge
+    for a real button, and the "in review" state disappears.
   ============================================================================
 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+  const WATCHFACE_URL = "https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch.watchface";
   const PLAY_URL = "";
 
   (function () {
+    // Watch face: live, always rendered.
+    const faceSlot  = document.getElementById("qr-slot-face");
+    const faceLabel = document.getElementById("qr-label-face");
+    if (faceSlot && WATCHFACE_URL) {
+      faceLabel.innerHTML =
+        '<a class="btn btn-primary" style="width:100%;justify-content:center" href="' +
+        WATCHFACE_URL + '">Watch face on Google Play</a>' +
+        '<span style="display:block;margin-top:12px;font-size:13px;color:var(--fg-faint)">' +
+        'Or point your watch’s camera at the code.</span>';
+      if (typeof QRCode === "undefined") {
+        faceSlot.textContent = "Open the link below to install";
+      } else {
+        faceSlot.classList.remove("empty");
+        faceSlot.textContent = "";
+        new QRCode(faceSlot, {
+          text: WATCHFACE_URL,
+          width: 170,
+          height: 170,
+          colorDark: "#0d0e14",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    }
+
+    // Wear OS app: still in review, stays in the placeholder state until PLAY_URL is set.
     const slot  = document.getElementById("qr-slot");
     const label = document.getElementById("qr-label");
-    if (!PLAY_URL) return;                       // stay in the "coming soon" state
+    if (!PLAY_URL) return;                       // stay in the "in review" state
 
     label.innerHTML =
       '<a class="btn btn-primary" style="width:100%;justify-content:center" href="' +

@@ -7,10 +7,10 @@ The two Play listings are the Wear OS **app** and the **watch face**. Both
 Android packages are built and published from
 [ai-omarchy-wearos](https://github.com/gladimdim/ai-omarchy-wearos):
 
-| Play listing | Package | Publish guide |
-|---|---|---|
-| Omarchy AI | `com.gladimdim.omarchy.ai.watch` | [store/app/PUBLISH.md](https://github.com/gladimdim/ai-omarchy-wearos/blob/main/store/app/PUBLISH.md) |
-| Omarchy AI Watch Face | `com.gladimdim.omarchy.ai.watch.watchface` | [store/watchface/PUBLISH.md](https://github.com/gladimdim/ai-omarchy-wearos/blob/main/store/watchface/PUBLISH.md) |
+| Play listing | Package | Status | Publish guide |
+|---|---|---|---|
+| Omarchy AI | `com.gladimdim.omarchy.ai.watch` | ⏳ In review — not yet on Play | [store/app/PUBLISH.md](https://github.com/gladimdim/ai-omarchy-wearos/blob/main/store/app/PUBLISH.md) |
+| [Omarchy AI Watch Face](https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch.watchface) | `com.gladimdim.omarchy.ai.watch.watchface` | ✅ Live on Play | [store/watchface/PUBLISH.md](https://github.com/gladimdim/ai-omarchy-wearos/blob/main/store/watchface/PUBLISH.md) |
 
 They are two Console apps on purpose. Watch Face Format cannot share an APK
 with Kotlin, so they cannot share a listing.
@@ -49,17 +49,25 @@ stops being true, update both Play App access texts before the next review.
 
 ---
 
-## 3. After the Wear OS **app** listing is live
+## 3. Play URLs on the marketing site
 
-The marketing site already has a Play button + QR, gated on an empty constant.
+The site (`docs/index.html`) already links the **live watch-face** listing via
+`WATCHFACE_URL`:
 
-1. Open [`docs/index.html`](../docs/index.html) (around line 574).
+```
+https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch.watchface
+```
+
+The Wear OS **app** QR stays parked on “in review” until that listing is live:
+
+1. Open [`docs/index.html`](../docs/index.html) (around line 586).
 2. Set `PLAY_URL` to the Omarchy AI **app** listing
    (`https://play.google.com/store/apps/details?id=com.gladimdim.omarchy.ai.watch`).
 3. Push `main` so Pages picks it up.
 
 Do not point `PLAY_URL` at the watch-face listing. The site is sending people
-to the app that pairs with this bridge.
+to the app that pairs with this bridge; the face has its own button + QR via
+`WATCHFACE_URL`.
 
 ---
 
@@ -67,4 +75,5 @@ to the app that pairs with this bridge.
 
 - [ ] `docs/privacy.html` is current and pushed; the URL above loads
 - [ ] `python3 server.py` still runs with no extra deps (reviewer path)
+- [ ] Watch face live link (`WATCHFACE_URL`) set and pushed
 - [ ] After the Wear OS app is on Play: `PLAY_URL` filled in and pushed
